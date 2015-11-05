@@ -9,7 +9,9 @@
 \usepackage[utf8]{inputenc}  
 % UTF-8 encoding is recommended by ShareLaTex
 
-     
+% Para listar código font e comandos
+\usepackage{minted}     
+
 \sloppy
 
 \title{Viabilidade do Uso Prático de Análise de Mutantes em Python}
@@ -151,19 +153,212 @@ ferramentas \textit{PROTEUM} e \textit{muRuby}).
 
 \subsection{Aplicação Prática de Análise de Mutantes}
 
-\section{Metodologia}
+\section{Experimentos}
 
-PATCH DO MUTPY
+Para a verificação da viabilidade da utilização da análise
+de mutantes em projetos Python optamos por utilizar a 
+ferramenta MutPy por se tratar da única ferramenta com
+desenvolvimento ativo, além de ser a mais completa até o
+momento.
 
-PROJETOS TESTADOS
+Todos os procedimentos descritos neste artigo foram realizados
+em um laptop pessoal, 2.8 GHz Intel Core i7, 16 GB de memória
+RAM 1600 MHz DDR3 e armazenamento do tipo SSD.
 
-PARAMETROS
+O interpretador Python utilizado para realizar os testes foi o
+CPython versão 3.3.6.
 
-\section{Dificuldades}
+\subsection{Seleção dos Projetos}
+
+Para a realização dos testes foram escolhidos quatro softwares
+amplamente utilizados entre desenvolvedores os desenvolvedores
+Python. Para a escolha a busca do portal Github\footnotemark 
+foi utilizada para filtrar projetos da linguagem Python 
+com pelo menos 1000 \textit{ forks}, 1000 estrelas e 1000 
+seguidores. A string the busca utilizada foi:
+
+\footnotetext{Github - https://github.com}
+
+\begin{minted}{bash}
+language:Python stars:>1000 forks:>1000 followers:>1000
+\end{minted}
+
+Além dos 4 primeiros projetos foi incluído um quinto projeto
+cujo um dos autores deste artigo também é autor. O objetivo 
+desta inserção foi de utilizar o projeto como \textit{benchmark}
+da qualidade dos resultados apresentados pela ferramenta
+MutPy, uma vez que parar analisar a equivalência de mutantes
+é importante que o desenvolvedor tenha amplo conhecimento do
+código.
+
+Cada uma das ferramentas tiveram seu conjunto de casos de
+testes executado conforme indicado por sua respectivas
+documentações. Para a execução do testes foi utilizada a
+\textit{branch} \textbf{master} de cada repositório.
+
+Após a execução dos testes um dos projetos foi excluído da
+lista inicial pois 21 dos 185 testes geravam erros durante a 
+execução. 
+
+A tabela \ref{tab:subjects} lista a seleção final de programas,
+quantidade de linha código, quantidade de casos de teste e
+tempo para execução de seus casos de teste.
+
+\begin{table}[ht]
+\centering
+\caption{Projetos Python Analisados}
+\label{tab:subjects}
+\smallskip
+\begin{tabular}{|l|c|c|c|}
+\hline
+Nome do Projeto & LOC (Python) & Casos de Teste & Tempo de execução dos testes\\[0.5ex]
+\hline
+&&&\\[-2ex]
+Django & 581.108 & 10305 & 117.315s\\[0.5ex]
+\hline
+&&&\\[-2ex]
+Flask & 13.894 & 257 & 2.071s\\[0.5ex]
+\hline
+&&&\\[-2ex]
+Requests & 12.566 & 150 & 48.303s\\[0.5ex]
+\hline
+&&&\\[-2ex]
+django-revproxy & 1.527 & 81 & 2.050s\\[0.5ex]
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Execução da MutPy}
+
+Nesta seção são apresentados os procedimentos realizados para
+a execução da MutPy para cada uma das ferramentas selecionadas.
+Também serão apresentadas as dificuldades encontradas em cada
+caso. Os relatórios gerados pela MutPy estarão disponíveis
+para download e não serão anexados ao artigo devido a grande
+quantidade de dados.
+
+\subsubsection{Django}
+
+Para executar a geração de mutantes no \textbf{Django} o comando
+a seguir foi utilizado:
+
+\begin{minted}{bash}
+mut.py --target django --unit-test tests \
+       --report-html report/
+\end{minted}
+
+A execução inicial da MutPy não conseguiu realizar a execução de
+nenhum teste e também falhou ao tentar realizar a geração de
+mutantes.
+
+\subsubsection{Flask}
+
+O comando utilizado para executar os MutPy com o \textbf{Flask} foi:
+
+\begin{minted}{bash}
+mut.py --target flask --unit-test tests \
+       --report-html report/
+\end{minted}
+
+Para o \textbf{Flask} execução da inicial da MutPy falhou. 
+A MutPy realiza uma busca por testes
+dentro de pacotes e módulos Python porém não é capaz de encontrar
+casos de testes dentro de diretórios. Para corrigir este problema 
+o diretório de teste foi modificado para um módulo Python.
+
+Após a intervenção foi realizada uma nova tentativa, desta vez a
+ferramenta foi capaz de gerar 1871 mutantes porém novamente, nenhum 
+caso de  teste foi encontrado, e por isso, nenhum mutante foi morto.
+
+\subsubsection{Requests}
+
+Ao realizar a execução dos testes para o programa \textbf{requests} foi
+utilizado o comando:
+
+\begin{minted}{bash}
+mut.py --target requests --unit-test test_requests \
+       --report-html report/
+\end{minted}
+
+Nessa tentativa a MutPy conseguiu realizar a execução inicial dos casos 
+de teste porém ao tentar iniciar a geração dos mutantes ela encerrou gerando 
+um erro do tipo \textit{ImportError}. 
+Após analisar a causa da falha foi possível
+detectar que a ferramenta abre cada módulo do programa e importa
+para tentar realizar a mutação mesmo que este módulo não seja utilizado.
+No caso do \textbf{requests} existem módulos que tem sua utilização
+determinada de acordo com a versão do interpretador Python utilizado, para 
+assim, manter a compatibilidade entre diferentes versões.
+
+Além disso o \textbf{requests} distribui suas dependências junto com o
+seu código e por não ser capaz de realizar tal diferenciação a geração 
+de mutantes ocorre tanto para o código-fonte real como as dependências.
+
+Para tentar mitigar o problema os arquivos de outras versões foram
+excluídos e a MutPy foi executada novamente. Na nova execução os testes
+foram executados, a geração de mutantes foi iniciada, porém
+após a criação de 130 mutantes a MutPy encerrou com erro pois não foi
+capaz de processar a constante \textit{\_\_file\_\_}.
+
+Para dar continuidade ao processo de geração de mutantes as 
+ocorrências da constante foram substituída pelas strings que deveriam ter
+sido resolvida pelo interpretador (tanto no fonte como nas dependências).
+Após a intervenção a execução foi novamente realizada.
+
+Na nova execução 310 mutantes foram gerados até que a execução foi
+interrompida pois houve falha na importação do módulo \textit{os}, nativo
+da linguagem Python, 
+
+Após essa última falha as tentativas de realizar os testes com o projeto
+\textbf{requests} foram encerradas.
+
+\subsubsection{django-revproxy}
+
+Para realizar os testes do \textbf{django-revproxy} o comando a seguir
+foi utilizado:
+
+\begin{minted}{bash}
+mut.py --target revproxy --unit-test tests \
+       --report-html report/
+\end{minted}
+
+Na tentativa inicial de realizar os testes a MutPy encerrou pois
+um dos testes unitários falhou. Os testes foram novamente executados,
+sem a utilização da MutPy e foi constatado que não haviam problemas no
+conjunto de testes porém, para dar continuidade aos testes o teste 
+conflitante foi comentado. 
+
+Após a intervenção os testes foram executados normalmente pela MutPy
+e o processo de geração de mutantes e análise de mutantes foi concluído
+com sucesso.
+
+\section{Discussão}
 
 PORQUE O PATCH FOI PRECISO
 
 TEMPO DE EXECUÇÃO
+
+NÃO É POSSÍVEL MARCAR MUTANTES EQUIVALENTES
+
+FUNCIONA APENAS COM PYTHON 3
+
+IMPORTA TODOS OS ARQUIVOS SENDO UTILIZADOS OU NÃO. DEVERIA SER POSSIVEL SELECIONAR ARQUIVOS/DIRETORIOS
+PARA SEREM EXCLUIDOS
+
+OUTRO PROBLEMA AO EXECUTAR A ANALISE NA REQUESTS EH QUE ELA MANTEM AS SUAS DEPENDENCIAS DENTRO DO PROPRIO REPOSITORIO
+ASSIM COMO O DJANGO
+
+RELATORIOS HTML DEVERIAM EXIBIR CODIGO LADO A LADO
+
+OUTROS TIPOS DE MUTANTES
+
+QUANDO UM TESTE FALHA NA ETAPA INICIAL NENHUM FEEDBACK SOBRE O QUE FALHOU E DADO
+
+TEM PROBLEMAS PARA LIDAR COM CAMINHOS TANTO PARA IMPORTS COMO PARA FILES
+
+A FORMA COMO OS IMPORTS SAO FEITOS AFETA A INTERPRETACAO DE CONSTANTES "MAGICAS" DA LINGUAGEM, COMO O \_\_FILE\_\_
+
+
 
 \section{Resultados}
 
@@ -175,9 +370,11 @@ PROBLEMAS DE CONFLITOS COM O MOCK
 
 VELOCIDADE DA COBERTURA
 
-\sections{AMEAÇAS A VALIDADE}
+\section{Ameaças a validade}
 
 O PATCH APLICADO PODE TER AFETADO O FUNCIONAMENTO.
+
+AS ALTERAÇÕES NECESSARIAS EM CADA FERRAMENTA PODEM TER INFLUENCIADO OS RESULTADOS
 
 \section{Conclusões}
 
